@@ -307,6 +307,7 @@ struct MDRequestImpl : public MutationImpl {
   void clear_ambiguous_auth();
 
   void print(ostream &out);
+  typedef ceph::shared_ptr<MDRequestImpl> Ref;
 };
 
 typedef ceph::shared_ptr<MDRequestImpl> MDRequestRef;
