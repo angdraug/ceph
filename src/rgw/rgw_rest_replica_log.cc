@@ -165,8 +165,9 @@ void RGWOp_BILog_SetBounds::execute() {
          time = s->info.args.get("time"),
          daemon_id = s->info.args.get("daemon_id");
 
-  if (bucket_instance.empty() ||
-      marker.empty() ||
+  bool has_bucket_instance = !bucket_instance.empty();
+
+  if (marker.empty() ||
       time.empty() ||
       daemon_id.empty()) {
     dout(5) << "Error - invalid parameter list" << dendl;
@@ -194,24 +195,20 @@ void RGWOp_BILog_SetBounds::execute() {
     return;
   }
 
-  http_ret = rl.update_bound(bucket, daemon_id, marker, ut, &markers);
+  http_ret = rl.update_bound(bucket, daemon_id, marker, ut, &markers, has_bucket_instance);
 }
 
 void RGWOp_BILog_GetBounds::execute() {
   string bucket_instance = s->info.args.get("bucket-instance");
 
-  if (bucket_instance.empty()) {
-    dout(5) << " Error - invalid parameter list" << dendl;
-    http_ret = -EINVAL;
-    return;
-  }
+  bool has_bucket_instance = !bucket_instance.empty();
 
   rgw_bucket bucket;
   if ((http_ret = bucket_instance_to_bucket(store, bucket_instance, bucket)) < 0) 
     return;
 
   RGWReplicaBucketLogger rl(store);
-  http_ret = rl.get_bounds(bucket, bounds);
+  http_ret = rl.get_bounds(bucket, bounds, has_bucket_instance);
 }
 
 void RGWOp_BILog_GetBounds::send_response() {
@@ -230,19 +227,14 @@ void RGWOp_BILog_DeleteBounds::execute() {
   string bucket_instance = s->info.args.get("bucket-instance"),
          daemon_id = s->info.args.get("daemon_id");
 
-  if (bucket_instance.empty() ||
-      daemon_id.empty()) {
-    dout(5) << "Error - invalid parameter list" << dendl;
-    http_ret = -EINVAL;
-    return;
-  }
+  bool has_bucket_instance = !bucket_instance.empty();
   
   rgw_bucket bucket;
   if ((http_ret = bucket_instance_to_bucket(store, bucket_instance, bucket)) < 0) 
     return;
   
   RGWReplicaBucketLogger rl(store);
-  http_ret = rl.delete_bound(bucket, daemon_id);
+  http_ret = rl.delete_bound(bucket, daemon_id, has_bucket_instance);
 }
 
 RGWOp *RGWHandler_ReplicaLog::op_get() {

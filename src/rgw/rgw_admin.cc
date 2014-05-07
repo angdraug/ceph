@@ -550,10 +550,17 @@ public:
   }
 };
 
-static int init_bucket(string& bucket_name, RGWBucketInfo& bucket_info, rgw_bucket& bucket)
+static int init_bucket(const string& bucket_name, const string& bucket_id,
+                       RGWBucketInfo& bucket_info, rgw_bucket& bucket)
 {
   if (!bucket_name.empty()) {
-    int r = store->get_bucket_info(NULL, bucket_name, bucket_info, NULL);
+    int r;
+    if (bucket_id.empty()) {
+      r = store->get_bucket_info(NULL, bucket_name, bucket_info, NULL);
+    } else {
+      string bucket_instance_id = bucket_name + ":" + bucket_id;
+      r = store->get_bucket_instance_info(NULL, bucket_instance_id, bucket_info, NULL, NULL);
+    }
     if (r < 0) {
       cerr << "could not get bucket info for bucket=" << bucket_name << std::endl;
       return r;
@@ -1495,7 +1502,7 @@ int main(int argc, char **argv)
       RGWBucketAdminOp::info(store, bucket_op, f);
     } else {
       RGWBucketInfo bucket_info;
-      int ret = init_bucket(bucket_name, bucket_info, bucket);
+      int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
       if (ret < 0) {
         cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
         return -ret;
@@ -1822,7 +1829,7 @@ next:
 
   if (opt_cmd == OPT_OBJECT_RM) {
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -1846,7 +1853,7 @@ next:
     }
 
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -1868,7 +1875,7 @@ next:
     }
 
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -1950,7 +1957,7 @@ next:
 
   if (opt_cmd == OPT_OBJECT_UNLINK) {
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -1966,7 +1973,7 @@ next:
 
   if (opt_cmd == OPT_OBJECT_STAT) {
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -2250,7 +2257,7 @@ next:
       return -EINVAL;
     }
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -2290,7 +2297,7 @@ next:
       return -EINVAL;
     }
     RGWBucketInfo bucket_info;
-    int ret = init_bucket(bucket_name, bucket_info, bucket);
+    int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
     if (ret < 0) {
       cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
       return -ret;
@@ -2471,14 +2478,14 @@ next:
         return -EINVAL;
       }
       RGWBucketInfo bucket_info;
-      int ret = init_bucket(bucket_name, bucket_info, bucket);
+      int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
       if (ret < 0) {
         cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
         return -ret;
       }
 
       RGWReplicaBucketLogger logger(store);
-      ret = logger.get_bounds(bucket, bounds);
+      ret = logger.get_bounds(bucket, bounds, true);
       if (ret < 0)
         return -ret;
     } else { // shouldn't get here
@@ -2522,14 +2529,14 @@ next:
         return -EINVAL;
       }
       RGWBucketInfo bucket_info;
-      int ret = init_bucket(bucket_name, bucket_info, bucket);
+      int ret = init_bucket(bucket_name, bucket_id, bucket_info, bucket);
       if (ret < 0) {
         cerr << "ERROR: could not init bucket: " << cpp_strerror(-ret) << std::endl;
         return -ret;
       }
 
       RGWReplicaBucketLogger logger(store);
-      ret = logger.delete_bound(bucket, daemon_id);
+      ret = logger.delete_bound(bucket, daemon_id, true);
       if (ret < 0)
         return -ret;
     }
