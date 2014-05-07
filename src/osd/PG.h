@@ -947,8 +947,7 @@ public:
       waiting_on(0), shallow_errors(0), deep_errors(0), fixed(0),
       active_rep_scrub(0),
       must_scrub(false), must_deep_scrub(false), must_repair(false),
-      classic(false),
-      finalizing(false), is_chunky(false), state(INACTIVE),
+      state(INACTIVE),
       deep(false)
     {
     }
@@ -983,12 +982,7 @@ public:
     // Map from object with errors to good peer
     map<hobject_t, pair<ScrubMap::object, pg_shard_t> > authoritative;
 
-    // classic scrub
-    bool classic;
-    bool finalizing;
-
     // chunky scrub
-    bool is_chunky;
     hobject_t start, end;
     eversion_t subset_last_update;
 
@@ -1045,9 +1039,6 @@ public:
       if (!block_writes)
 	return false;
 
-      if (!is_chunky)
-	return true;
-
       if (soid >= start && soid < end)
 	return true;
 
@@ -1056,8 +1047,6 @@ public:
 
     // clear all state
     void reset() {
-      classic = false;
-      finalizing = false;
       block_writes = false;
       active = false;
       queue_snap_trim = false;
@@ -1118,6 +1107,13 @@ public:
   void build_scrub_map(ScrubMap &map, ThreadPool::TPHandle &handle);
   void build_inc_scrub_map(
     ScrubMap &map, eversion_t v, ThreadPool::TPHandle &handle);
+  /**
+   * returns true if [begin, end) is good to scrub at this time
+   * a false return value obliges the implementer to requeue scrub when the
+   * condition preventing scrub clears
+   */
+  virtual bool _range_available_for_scrub(
+    const hobject_t &begin, const hobject_t &end) = 0;
   virtual void _scrub(ScrubMap &map) { }
   virtual void _scrub_clear_state() { }
   virtual void _scrub_finish() { }
@@ -2037,10 +2033,14 @@ public:
   void fulfill_info(pg_shard_t from, const pg_query_t &query,
 		    pair<pg_shard_t, pg_info_t> &notify_info);
   void fulfill_log(pg_shard_t from, const pg_query_t &query, epoch_t query_epoch);
-  bool is_split(OSDMapRef lastmap, OSDMapRef nextmap);
-  bool acting_up_affected(
-    int newupprimary, int newactingprimary,
-    const vector<int>& newup, const vector<int>& newacting);
+
+  bool should_restart_peering(
+    int newupprimary,
+    int newactingprimary,
+    const vector<int>& newup,
+    const vector<int>& newacting,
+    OSDMapRef lastmap,
+    OSDMapRef osdmap);
 
   // OpRequest queueing
   bool can_discard_op(OpRequestRef op);

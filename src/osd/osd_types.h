@@ -1704,6 +1704,24 @@ struct pg_interval_t {
   static void generate_test_instances(list<pg_interval_t*>& o);
 
   /**
+   * Determines whether there is an interval change
+   */
+  static bool is_new_interval(
+    int old_acting_primary,                     ///< [in] primary as of lastmap
+    int new_acting_primary,                     ///< [in] primary as of lastmap
+    const vector<int> &old_acting,              ///< [in] acting as of lastmap
+    const vector<int> &new_acting,              ///< [in] acting as of osdmap
+    int old_up_primary,                         ///< [in] up primary of lastmap
+    int new_up_primary,                         ///< [in] up primary of osdmap
+    const vector<int> &old_up,                  ///< [in] up as of lastmap
+    const vector<int> &new_up,                  ///< [in] up as of osdmap
+    ceph::shared_ptr<const OSDMap> osdmap,  ///< [in] current map
+    ceph::shared_ptr<const OSDMap> lastmap, ///< [in] last map
+    int64_t poolid,                             ///< [in] pool for pg
+    pg_t pgid                                   ///< [in] pgid for pg
+    );
+
+  /**
    * Integrates a new map into *past_intervals, returns true
    * if an interval was closed out.
    */
@@ -2690,6 +2708,7 @@ public:
   // set if writes for this object are blocked on another objects recovery
   ObjectContextRef blocked_by;      // object blocking our writes
   set<ObjectContextRef> blocking;   // objects whose writes we block
+  bool requeue_scrub_on_unblock;    // true if we need to requeue scrub on unblock
 
   // any entity in obs.oi.watchers MUST be in either watchers or unconnected_watchers.
   map<pair<uint64_t, entity_name_t>, WatchRef> watchers;
@@ -2862,7 +2881,7 @@ public:
       destructor_callback(0),
       lock("ReplicatedPG::ObjectContext::lock"),
       unstable_writes(0), readers(0), writers_waiting(0), readers_waiting(0),
-      blocked(false) {}
+      blocked(false), requeue_scrub_on_unblock(false) {}
 
   ~ObjectContext() {
     assert(rwstate.empty());
